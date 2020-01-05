@@ -31,6 +31,7 @@
           click: ()=>{
               let tables = $('.aws-plc-content table');
               let priceColumnMarkers = ['Цена за час','Price Per Hour','Effective Hourly','почасовой тариф'];
+              let priceCellMarkers = ['USD за час','per Hour'];
 
               for (let ti=0; ti<tables.length; ti++) {
                   let columnId = -1;
@@ -49,19 +50,15 @@
                       if (columnId>-1) break;
                   }
 
-                  if (columnId<0) continue;
-
-                  for (let tri=0; tri<tr.length; tri++) {
-                      let td = $(tr[tri]).find('td');
-                      if (columnId >= td.length) continue;
-                      let tdEl = $(td[columnId]);
-                      if (tdEl.find('.month-pricing').length) continue;
+                  let applyMonthlyCalculation = (td) => {
+                      let tdEl = $(td);
+                      if (tdEl.find('.month-pricing').length) return;
                       let priceCellText = tdEl.text().trim();
                       let matches = priceCellText.match(/(\d+,\d+)\sUSD/);
                       if (!matches || !matches.length) {
                           matches = priceCellText.match(/\$(\d+\.\d+)/);
                       }
-                      if (!matches || !matches.length) continue;
+                      if (!matches || !matches.length) return;
                       let price = parseFloat(matches[1].replace(',','.'));
                       let monthlyPrice = price * 24 * 31;
                       let monthlyPriceEl = $('<div/>',{
@@ -71,7 +68,28 @@
                           style: 'font-size: 11px; background-color:#e5eaef; padding:3px;'
                       });
                       tdEl.append(monthlyPriceEl);
+                  };
+
+                  if (columnId>-1) { // if price column found by marker
+                      for (let tri=0; tri<tr.length; tri++) {
+                          let td = $(tr[tri]).find('td');
+                          if (columnId >= td.length) continue;
+                          applyMonthlyCalculation(td[columnId]);
+                      }
+                  } else { // if not then find cell markers
+                      for (let tri=0; tri<tr.length; tri++) {
+                          let td = $(tr[tri]).find('td');
+                          for (let tdi=0; tdi<td.length; tdi++){
+                              for (let k=0; k<priceCellMarkers.length; k++){
+                                  if ($(td[tdi]).text().indexOf(priceCellMarkers[k]) !== -1){
+                                      applyMonthlyCalculation(td[tdi]);
+                                      break;
+                                  }
+                              }
+                          }
+                      }
                   }
+
               }
           }
       });
